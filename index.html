@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0;font:14px system-ui}[hidden]{display:none!important}</style>
+<title>Переливание</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&display=swap">
+<style>
+/* Layout: one screen. Evening wall with lit wooden shelves holding glass flasks (canvas); level title on top, controls at the thumb. Single deliberate dusk look. */
+:root{
+  --wall-1:#3e5470; --wall-2:#1c2636; --ink:#eef3fa; --muted:#a9b8cc; --accent:#ffb547; --accent-ink:#2a1a00;
+  --chip:rgba(255,255,255,.08); --chip-line:rgba(255,255,255,.18); --card:#26344a;
+  --f-display:"Unbounded", "Arial Black", system-ui, sans-serif;
+  --f-ui:"Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:radial-gradient(ellipse 90% 70% at 50% 30%, var(--wall-1) 0%, var(--wall-2) 75%) fixed, var(--wall-2);color:var(--ink);
+  font-family:var(--f-ui);display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:14px 4px}
+.kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,4.2vw,38px);margin:2px 0 0;line-height:1;letter-spacing:-.01em}
+h1 span{color:var(--accent)}
+.meta{font-size:13px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;line-height:1.5}
+.meta b{color:var(--ink);font-weight:600}
+main{flex:1;min-height:0;position:relative}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation}
+footer{display:flex;gap:8px;justify-content:center;padding-block:6px 14px}
+button{font:500 15px/1 var(--f-ui);color:var(--ink);background:var(--chip);border:1px solid var(--chip-line);border-radius:14px;
+  padding:12px 18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:background .15s, transform .1s}
+button:hover{background:rgba(255,255,255,.14)}
+button:active{transform:scale(.97)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+button svg{width:18px;height:18px;flex:none}
+button .n{font-variant-numeric:tabular-nums;opacity:.7;font-size:13px}
+.banner{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:var(--card);border:1px solid var(--chip-line);border-radius:14px;
+  padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 16px);
+  box-shadow:0 12px 30px rgba(0,0,0,.35);font-size:15px;z-index:5}
+.banner button{padding:9px 14px;font-size:14px}
+.overlay{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:rgba(8,12,20,.55);padding:16px}
+.card{background:var(--card);border:1px solid var(--chip-line);border-radius:22px;padding:28px 26px;text-align:center;width:100%;max-width:340px;
+  box-shadow:0 30px 70px rgba(0,0,0,.45);animation:pop .35s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes pop{from{transform:scale(.9);opacity:0}}
+.card .kicker{margin-bottom:6px}
+.card h2{font-family:var(--f-display);font-size:30px;margin:0 0 8px;line-height:1.1}
+.card p{color:var(--muted);margin:4px 0 18px;font-variant-numeric:tabular-nums}
+.card .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+@media (max-width:560px){
+  header{padding-block:10px 2px}
+  footer{gap:6px}
+  footer button{flex:1 1 0;padding:12px 6px;font-size:14px;min-width:0}
+}
+@media (prefers-reduced-motion:reduce){.card{animation:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div><div class="kicker">Переливание</div><h1>Уровень <span id="lvl">1</span></h1></div>
+  <div class="meta"><div>Собрано: <b id="mColors">0 / 3</b></div><div>Ходов: <b id="mMoves">0</b></div></div>
+</header>
+<main id="main"><canvas id="cv" aria-label="Игровое поле: колбы с цветной жидкостью"></canvas></main>
+<footer>
+  <button id="bUndo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Назад</button>
+  <button id="bRestart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Заново</button>
+  <button id="bAdd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v5l-4 5v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6l-4-5V3"/><path d="M12 13v5M9.5 15.5h5"/></svg>Колба <span class="n" id="nAdd">1</span></button>
+</footer>
+
+<script>
+(() => {
+// ============ Colours ============
+const COLORS = ['#e2372f','#ff8a1f','#f7cf2a','#86c43c','#178a52','#22c3d6','#2463d8','#7a43e0','#ef5fa8','#8c5634','#a3adb8','#14305e'];
+const CAP = 4;
+
+// ============ Seeded random ============
+function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const colorsFor = L => L <= 1 ? 3 : L <= 2 ? 4 : L <= 4 ? 5 : L <= 7 ? 6 : L <= 11 ? 7 : L <= 15 ? 8 : L <= 20 ? 9 : L <= 26 ? 10 : L <= 33 ? 11 : 12;
+
+// ============ Rules + solver ============
+const top = b => b[b.length - 1];
+const isDone = b => b.length === CAP && b.every(c => c === b[0]);
+function runLen(b) { let n = 0; for (let i = b.length - 1; i >= 0 && b[i] === top(b); i--) n++; return n; }
+function canPour(bs, i, j) {
+  const a = bs[i], b = bs[j];
+  if (i === j || !a.length || isDone(a) || b.length >= CAP) return 0;
+  if (b.length && top(b) !== top(a)) return 0;
+  return Math.min(runLen(a), CAP - b.length);
+}
+const solved = bs => bs.every(b => !b.length || isDone(b));
+function solvable(start, limit = 120000) {
+  const bs = start.map(b => b.slice()), seen = new Set();
+  let count = 0;
+  const key = () => bs.map(b => b.join(',')).sort().join('|');
+  function dfs() {
+    if (solved(bs)) return true;
+    const k = key(); if (seen.has(k)) return false; seen.add(k);
+    if (++count > limit) throw 0;
+    for (let i = 0; i < bs.length; i++) for (let j = 0; j < bs.length; j++) {
+      const n = canPour(bs, i, j); if (!n) continue;
+      if (!bs[j].length && runLen(bs[i]) === bs[i].length) continue; // pointless: whole bottle into empty
+      const c = top(bs[i]);
+      for (let t = 0; t < n; t++) bs[j].push(bs[i].pop());
+      if (dfs()) return true;
+      for (let t = 0; t < n; t++) bs[i].push(bs[j].pop());
+    }
+    return false;
+  }
+  try { return dfs(); } catch (e) { return false; }
+}
+function generate(L) {
+  const rnd = mulberry(L * 7919 + 13), C = colorsFor(L);
+  for (let tries = 0; tries < 60; tries++) {
+    const seg = [];
+    for (let c = 0; c < C; c++) for (let k = 0; k < CAP; k++) seg.push(c);
+    for (let i = seg.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [seg[i], seg[j]] = [seg[j], seg[i]]; }
+    const bs = [];
+    for (let b = 0; b < C; b++) bs.push(seg.slice(b * CAP, b * CAP + CAP));
+    bs.push([], []);
+    if (bs.some(b => b.length && b.every(c => c === b[0]))) continue;
+    if (solvable(bs)) return bs;
+  }
+  const bs = []; for (let c = 0; c < C; c++) bs.push([c, c, c, c]); bs.push([], []); // fallback (never expected)
+  return bs;
+}
+
+// ============ State ============
+const store = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e){} } };
+let G; // {level, initial, bottles, history, extra, moves}
+function startLevel(L) {
+  const init = generate(L);
+  G = { level: L, initial: init.map(b => b.slice()), bottles: init.map(b => b.slice()), history: [], extra: 1, moves: 0 };
+  corks = []; selected = -1; lifts = []; waves = []; anim = null; leaving = []; sparks = []; shakes = [];
+  save(); relayout(); ui(); kick();
+}
+function save() { store.set('water-v1', JSON.stringify(G)); }
+function load() {
+  try { const g = JSON.parse(store.get('water-v1')); if (g && g.bottles && g.level) { G = g; return true; } } catch (e) {}
+  return false;
+}
+
+// ============ Geometry ============
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), main = document.getElementById('main');
+let W = 0, H = 0, dpr = 1, S = 50, SH = null, pos = [];
+function poly(mw, nh, bw, sh, Ht, r) {
+  const p = [[-mw, 0], [-mw, nh], [-bw, nh + sh], [-bw, Ht - r]];
+  for (let i = 1; i <= 8; i++) { const a = Math.PI - Math.PI / 2 * i / 8; p.push([-bw + r + r * Math.cos(a), Ht - r + r * Math.sin(a)]); }
+  p.push([bw - r, Ht]);
+  for (let i = 1; i <= 8; i++) { const a = Math.PI / 2 - Math.PI / 2 * i / 8; p.push([bw - r + r * Math.cos(a), Ht - r + r * Math.sin(a)]); }
+  p.push([bw, nh + sh], [mw, nh], [mw, 0]);
+  return p;
+}
+function clipBelow(pts, h) {
+  const out = [];
+  for (let i = 0; i < pts.length; i++) {
+    const c = pts[i], p = pts[(i + pts.length - 1) % pts.length], ci = c[1] >= h, pi = p[1] >= h;
+    if (ci !== pi) { const t = (h - p[1]) / (c[1] - p[1]); out.push([p[0] + (c[0] - p[0]) * t, h]); }
+    if (ci) out.push(c);
+  }
+  return out;
+}
+function area(pts) { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a) / 2; }
+const areaBelow = (pts, h) => area(clipBelow(pts, h));
+function levelFor(pts, A) {
+  let lo = Infinity, hi = -Infinity;
+  pts.forEach(p => { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
+  if (A <= 0) return hi;
+  for (let k = 0; k < 28; k++) { const m = (lo + hi) / 2; if (areaBelow(pts, m) > A) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+const rot = (p, a) => [p[0] * Math.cos(a) - p[1] * Math.sin(a), p[0] * Math.sin(a) + p[1] * Math.cos(a)];
+function makeShape(s) {
+  const t = Math.max(1.2, s * .05);
+  const d = { s, mw: .30 * s, nh: .36 * s, bw: .5 * s, sh: .26 * s, Ht: 3.3 * s, r: .42 * s };
+  d.outer = poly(d.mw, d.nh, d.bw, d.sh, d.Ht, d.r);
+  d.inner = poly(d.mw - t, d.nh, d.bw - t, d.sh, d.Ht - t, d.r - t);
+  d.yFull = d.nh + d.sh + .2 * s;
+  d.unit = areaBelow(d.inner, d.yFull) / CAP;
+  // How much liquid stays in the flask at each tilt before it reaches the lip -> realistic pour angle
+  d.cap = [];
+  for (let a = 0; a <= 2.3; a += .02) {
+    const r = d.inner.map(p => rot(p, a)), lip = rot([d.mw - t, 0], a);
+    d.cap.push([a, areaBelow(r, lip[1]) / d.unit]);
+  }
+  return d;
+}
+function tiltFor(units) {
+  const c = SH.cap;
+  if (units >= c[0][1]) return 0;
+  for (let i = 1; i < c.length; i++) if (c[i][1] <= units) {
+    const [a0, v0] = c[i - 1], [a1, v1] = c[i];
+    return a0 + (a1 - a0) * (v0 - units) / ((v0 - v1) || 1);
+  }
+  return c[c.length - 1][0];
+}
+function relayout(snap = true) {
+  dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  W = main.clientWidth; H = main.clientHeight;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  if (!G) return;
+  // flask size stays fixed for the whole level, so removing finished flasks doesn't make the rest jump in size
+  const n = Math.max(G.bottles.length, G.initial.length + (1 - G.extra));
+  let best = null;
+  for (let r = 1; r <= 4; r++) {
+    const per = Math.ceil(n / r);
+    const s = Math.min(W / (per * 1.6 + .2), H / (r * 4.75 + .1), 74);
+    if (!best || s > best.s + .5) best = { s, r, per };
+  }
+  S = Math.max(16, best.s); SH = makeShape(S);
+  const cur = G.bottles.length, rowsUsed = Math.max(1, Math.ceil(cur / best.per));
+  const rowH = S * 4.75, top0 = (H - rowsUsed * rowH) / 2;
+  pos = [];
+  let left = cur;
+  for (let r = 0; r < rowsUsed; r++) {
+    const cnt = Math.min(best.per, Math.ceil(left / (rowsUsed - r)));
+    const gap = Math.min(S * 1.6, (W - 8) / cnt);
+    const x0 = W / 2 - gap * (cnt - 1) / 2;
+    for (let k = 0; k < cnt; k++) pos.push({ x: x0 + gap * k, y: top0 + r * rowH + S * 1.05, row: r });
+    left -= cnt;
+  }
+  if (snap || dp.length !== pos.length) dp = pos.map(p => ({ x: p.x, y: p.y }));
+  kick();
+}
+
+// ============ Animation state ============
+let selected = -1, lifts = [], waves = [], corks = [], anim = null, shakes = [], raf = 0, dp = [], leaving = [], sparks = [];
+const now = () => performance.now();
+const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+function runs(b) { const r = []; b.forEach(c => { if (r.length && r[r.length - 1].c === c) r[r.length - 1].n++; else r.push({ c, n: 1 }); }); return r; }
+
+// ============ Drawing ============
+function pathOf(pts) { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); }
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = n >> 8 & 255, b = n & 255;
+  if (f > 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; } else { r *= 1 + f; g *= 1 + f; b *= 1 + f; }
+  return `rgb(${r | 0},${g | 0},${b | 0})`;
+}
+function drawShelves(t) {
+  const rowsSeen = {};
+  pos.forEach((p, i) => { (rowsSeen[p.row] ||= []).push(dp[i] || p); });
+  Object.values(rowsSeen).forEach(list => {
+    const y = list[0].y + SH.Ht + S * .02, x0 = list[0].x - S * .95, x1 = list[list.length - 1].x + S * .95, th = S * .2;
+    const sg = ctx.createLinearGradient(0, y + th, 0, y + th + S * .45); // soft drop shadow
+    sg.addColorStop(0, 'rgba(0,0,0,.32)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = sg; ctx.fillRect(x0 + 4, y + th, x1 - x0 - 8, S * .45);
+    const g = ctx.createLinearGradient(0, y, 0, y + th);
+    g.addColorStop(0, '#b98457'); g.addColorStop(.25, '#9a6a42'); g.addColorStop(1, '#6b4529');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x0, y, x1 - x0, th, 3) : ctx.rect(x0, y, x1 - x0, th); ctx.fill();
+    ctx.fillStyle = 'rgba(255,230,190,.35)'; ctx.fillRect(x0 + 2, y, x1 - x0 - 4, 1.2);
+    ctx.strokeStyle = 'rgba(60,35,15,.25)'; ctx.lineWidth = 1;
+    for (let k = 0; k < 3; k++) { ctx.beginPath(); const yy = y + th * (.35 + k * .2); ctx.moveTo(x0 + 6, yy); ctx.bezierCurveTo(x0 + (x1 - x0) * .3, yy - 1.5, x0 + (x1 - x0) * .6, yy + 1.5, x1 - 6, yy); ctx.stroke(); }
+  });
+}
+function drawBottle(i, mx, my, a, rr, wave, t) {
+  const sh = SH, s = sh.s, baseA = ctx.globalAlpha;
+  const inW = sh.inner.map(p => { const q = rot(p, a); return [q[0] + mx, q[1] + my]; });
+  const outW = sh.outer.map(p => { const q = rot(p, a); return [q[0] + mx, q[1] + my]; });
+  const total = rr.reduce((v, r) => v + r.n, 0);
+  let minX = Infinity, maxX = -Infinity, maxY = -Infinity;
+  inW.forEach(p => { minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]); maxY = Math.max(maxY, p[1]); });
+  // back glass
+  pathOf(outW); ctx.fillStyle = 'rgba(200,225,255,.07)'; ctx.fill();
+  let surfaceY = null;
+  if (total > .001) {
+    ctx.save(); pathOf(inW); ctx.clip();
+    let cum = 0, prevY = maxY + 4;
+    rr.forEach((r, k) => {
+      cum += r.n;
+      const y = levelFor(inW, cum * sh.unit);
+      const isTop = k === rr.length - 1;
+      const col = COLORS[r.c];
+      const g = ctx.createLinearGradient(0, y, 0, prevY);
+      g.addColorStop(0, shade(col, .1)); g.addColorStop(1, shade(col, -.12));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(minX - 4, prevY + 1);
+      if (isTop && wave > .05) {
+        for (let x = minX - 4; x <= maxX + 4; x += 3) ctx.lineTo(x, y + wave * Math.sin((x - mx) / s * 5 + t * .014));
+        ctx.lineTo(maxX + 4, prevY + 1);
+      } else { ctx.lineTo(minX - 4, y); ctx.lineTo(maxX + 4, y); ctx.lineTo(maxX + 4, prevY + 1); }
+      ctx.closePath(); ctx.fill();
+      if (isTop) {
+        surfaceY = y;
+        ctx.strokeStyle = shade(col, .45); ctx.globalAlpha = baseA * .7; ctx.lineWidth = Math.max(1, s * .035);
+        ctx.beginPath();
+        for (let x = minX - 4; x <= maxX + 4; x += 3) { const yy = y + (wave > .05 ? wave * Math.sin((x - mx) / s * 5 + t * .014) : 0); x === minX - 4 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy); }
+        ctx.stroke(); ctx.globalAlpha = baseA;
+      }
+      prevY = y;
+    });
+    // cylindrical shading, in the flask's own frame
+    ctx.translate(mx, my); ctx.rotate(a);
+    const g = ctx.createLinearGradient(-sh.bw, 0, sh.bw, 0);
+    g.addColorStop(0, 'rgba(0,0,0,.32)'); g.addColorStop(.22, 'rgba(255,255,255,.14)'); g.addColorStop(.42, 'rgba(255,255,255,0)');
+    g.addColorStop(.78, 'rgba(0,0,0,.1)'); g.addColorStop(1, 'rgba(0,0,0,.38)');
+    ctx.fillStyle = g; ctx.fillRect(-sh.bw, -s, sh.bw * 2, sh.Ht + 2 * s);
+    ctx.restore();
+  }
+  // glass edge
+  pathOf(outW); ctx.strokeStyle = 'rgba(222,236,255,.62)'; ctx.lineWidth = Math.max(1.2, s * .035); ctx.stroke();
+  ctx.save(); ctx.translate(mx, my); ctx.rotate(a);
+  // highlights
+  const hy0 = sh.nh + sh.sh + .12 * s, hy1 = sh.Ht - .45 * s;
+  let g = ctx.createLinearGradient(0, hy0, 0, hy1);
+  g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(.6, 'rgba(255,255,255,.22)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g; ctx.beginPath(); rrect(-sh.bw + .12 * s, hy0, .075 * s, hy1 - hy0, .04 * s); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.16)'; ctx.beginPath(); rrect(sh.bw - .17 * s, hy0 + .3 * s, .04 * s, (hy1 - hy0) * .5, .02 * s); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.beginPath(); rrect(-sh.bw + .2 * s, sh.Ht - .16 * s, sh.bw * 1.1, .05 * s, .025 * s); ctx.fill();
+  // rim
+  ctx.strokeStyle = 'rgba(230,242,255,.75)'; ctx.lineWidth = Math.max(1.2, s * .04);
+  ctx.beginPath(); rrect(-sh.mw - .06 * s, -.06 * s, (sh.mw + .06 * s) * 2, .13 * s, .05 * s); ctx.stroke();
+  // cork
+  const ck = i < 0 ? -1e6 : corks[i];
+  if (ck) {
+    const p = clamp((t - ck) / 380), drop = (1 - ease(p)) * -1.2 * s;
+    ctx.globalAlpha = baseA * clamp(p * 3);
+    const cg = ctx.createLinearGradient(-sh.mw, 0, sh.mw, 0);
+    cg.addColorStop(0, '#8a5d35'); cg.addColorStop(.35, '#d0a271'); cg.addColorStop(1, '#7a4f2b');
+    ctx.fillStyle = cg; ctx.beginPath(); rrect(-sh.mw - .04 * s, -.34 * s + drop, (sh.mw + .04 * s) * 2, .5 * s, .08 * s); ctx.fill();
+    ctx.fillStyle = 'rgba(70,40,15,.45)';
+    [[-.12, -.2], [.1, -.12], [-.02, 0], [.14, .05], [-.16, .04]].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x * s, y * s + drop, .022 * s, 0, 7); ctx.fill(); });
+    ctx.globalAlpha = baseA;
+  }
+  ctx.restore();
+  return surfaceY;
+}
+function rrect(x, y, w, h, r) { if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
+
+function frame() {
+  raf = 0;
+  const t = now();
+  let busy = false;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  if (!G || !SH) return;
+  drawShelves(t);
+  const n = G.bottles.length;
+  // lifts
+  for (let i = 0; i < n; i++) {
+    const target = i === selected && !(anim && anim.src === i) ? 1 : 0;
+    lifts[i] = lifts[i] ?? 0;
+    lifts[i] += (target - lifts[i]) * .3;
+    if (Math.abs(target - lifts[i]) > .01) busy = true; else lifts[i] = target;
+    // slide into new place after a finished flask leaves
+    const d = dp[i] || (dp[i] = { x: pos[i].x, y: pos[i].y });
+    d.x += (pos[i].x - d.x) * .16; d.y += (pos[i].y - d.y) * .16;
+    if (Math.abs(pos[i].x - d.x) + Math.abs(pos[i].y - d.y) > .3) busy = true; else { d.x = pos[i].x; d.y = pos[i].y; }
+  }
+  // pour animation timeline
+  let A = null;
+  if (anim) {
+    busy = true;
+    const e = t - anim.t0, { tMove, tPour, tBack } = anim;
+    const src = pos[anim.src], dst = pos[anim.dst], side = src.x < dst.x ? 1 : -1;
+    // keep the pouring lip just above the receiving flask's mouth, whatever the tilt
+    const at = ang => { const l = rot([side * SH.mw, 0], ang); return [dst.x - side * S * .08 - l[0], dst.y - S * .62 - l[1]]; };
+    let mx, my, poured = 0, a;
+    const v0 = G.bottles[anim.src].length;
+    if (e < tMove) {
+      const p = ease(e / tMove);
+      a = side * tiltFor(v0) * p * .92;
+      const [px, py] = at(side * tiltFor(v0) * .92);
+      mx = src.x + (px - src.x) * p; my = src.y - S * .35 + (py - src.y + S * .35) * p;
+    } else if (e < tMove + tPour) {
+      const p = (e - tMove) / tPour;
+      poured = anim.k * clamp(p * 1.05);
+      a = side * Math.max(tiltFor(v0) * .92, tiltFor(v0 - poured));
+      [mx, my] = at(a);
+    } else if (e < tMove + tPour + tBack) {
+      const p = ease((e - tMove - tPour) / tBack);
+      poured = anim.k;
+      const [px, py] = at(side * tiltFor(v0 - anim.k));
+      mx = px + (src.x - px) * p; my = py + (src.y - py) * p;
+      a = side * tiltFor(v0 - anim.k) * (1 - p);
+    } else { finishPour(); return frame(); }
+    A = { mx, my, a, poured, side, pouring: e >= tMove && e < tMove + tPour + 60 };
+  }
+  // static bottles (and the receiving one)
+  let dstSurface = null;
+  for (let i = 0; i < n; i++) {
+    if (anim && i === anim.src) continue;
+    let rr = runs(G.bottles[i]);
+    if (anim && i === anim.dst && A.poured > 0) {
+      const add = Math.max(0, A.poured - .08 * anim.k);
+      if (rr.length && rr[rr.length - 1].c === anim.c) rr[rr.length - 1].n += add; else rr.push({ c: anim.c, n: add });
+    }
+    let dx = 0;
+    const sk = shakes[i]; if (sk) { const p = (t - sk) / 380; if (p < 1) { dx = Math.sin(p * 30) * S * .09 * (1 - p); busy = true; } else shakes[i] = 0; }
+    const w = waves[i] ? Math.max(0, S * .07 * (1 - (t - waves[i]) / 900)) : 0; if (w > 0) busy = true;
+    if (corks[i] && t - corks[i] < 400) busy = true;
+    const p = dp[i];
+    // contact shadow
+    ctx.fillStyle = `rgba(0,0,0,${.32 - lifts[i] * .15})`;
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + SH.Ht + S * .03, S * .5, S * .08, 0, 0, 7); ctx.fill();
+    const sy = drawBottle(i, p.x + dx, p.y - lifts[i] * S * .35, 0, rr, w + (anim && i === anim.dst && A.pouring ? S * .03 : 0), t);
+    if (anim && i === anim.dst) dstSurface = sy ?? (p.y + SH.Ht - S * .05);
+  }
+  // finished flasks fly off the shelf
+  leaving = leaving.filter(L => {
+    const p = (t - L.t0) / 750; if (p >= 1) return false;
+    busy = true;
+    ctx.globalAlpha = 1 - p * p;
+    drawBottle(-1, L.x, L.y - ease(p) * S * 2.4, 0, runs(L.b), 0, t);
+    ctx.globalAlpha = 1;
+    return true;
+  });
+  sparks = sparks.filter(s => {
+    const p = (t - s.t0) / 900; if (p >= 1) return false;
+    busy = true;
+    const k = (t - s.t0) / 16, x = s.x + s.vx * k, y = s.y + s.vy * k + .02 * k * k;
+    ctx.globalAlpha = 1 - p; ctx.fillStyle = s.c;
+    ctx.beginPath(); ctx.arc(x, y, s.r * (1 - p * .5), 0, 7); ctx.fill();
+    ctx.globalAlpha = (1 - p) * .8; ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(x, y, s.r * .4, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
+    return true;
+  });
+  // stream + moving bottle
+  if (anim) {
+    const src = pos[anim.src];
+    ctx.fillStyle = 'rgba(0,0,0,.14)'; ctx.beginPath(); ctx.ellipse(src.x, src.y + SH.Ht + S * .03, S * .5, S * .08, 0, 0, 7); ctx.fill();
+    const rr = runs(G.bottles[anim.src]);
+    rr[rr.length - 1].n -= A.poured; if (rr[rr.length - 1].n <= .001) rr.pop();
+    if (A.pouring) {
+      const lip = rot([A.side * (SH.mw - 1), 0], A.a);
+      const lx = A.mx + lip[0], ly = A.my + lip[1], dst = pos[anim.dst];
+      const ey = dstSurface ?? (dst.y + SH.Ht);
+      const e = t - anim.t0 - anim.tMove, fade = clamp(e / 90) * clamp((anim.tPour + 60 - e) / 120);
+      const wdt = S * .1 * fade;
+      if (wdt > .3) {
+        const col = COLORS[anim.c];
+        const g = ctx.createLinearGradient(lx, 0, lx + A.side * wdt * 2, 0);
+        g.addColorStop(0, shade(col, .2)); g.addColorStop(1, shade(col, -.15));
+        ctx.strokeStyle = g; ctx.lineWidth = wdt; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(lx, ly); ctx.quadraticCurveTo(lx + A.side * S * .12, ly + S * .05, dst.x + A.side * S * .03, Math.min(ey, ly + S * .4)); ctx.lineTo(dst.x + A.side * S * .03, ey); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = wdt * .25;
+        ctx.beginPath(); ctx.moveTo(dst.x - A.side * wdt * .15, Math.min(ey, ly + S * .4)); ctx.lineTo(dst.x - A.side * wdt * .15, ey - 2); ctx.stroke();
+      }
+    }
+    drawBottle(anim.src, A.mx, A.my, A.a, rr, 0, t);
+  }
+  if (busy) kick();
+}
+function kick() { if (!raf) raf = requestAnimationFrame(frame); }
+
+// ============ Moves ============
+function pour(i, j, n) {
+  G.history.push(G.bottles.map(b => b.slice()));
+  if (G.history.length > 60) G.history.shift();
+  const c = top(G.bottles[i]);
+  anim = { src: i, dst: j, k: n, c, t0: now(), tMove: 260, tPour: 300 + 170 * n, tBack: 280 };
+  selected = -1; ui(); kick();
+}
+function finishPour() {
+  const { src, dst, k } = anim;
+  for (let t = 0; t < k; t++) G.bottles[dst].push(G.bottles[src].pop());
+  waves[dst] = now(); waves[src] = now();
+  anim = null; G.moves++;
+  scheduleRemovals();
+  save(); ui();
+  if (solved(G.bottles)) setTimeout(() => { if (solved(G.bottles) && !overlay) win(); }, 1500);
+}
+const scheduled = new WeakSet();
+function scheduleRemovals() {
+  G.bottles.forEach((b, i) => {
+    if (!isDone(b) || scheduled.has(b)) return;
+    scheduled.add(b); corks[i] = now();
+    setTimeout(() => removeBottle(b), 800);
+  });
+  kick();
+}
+function removeBottle(b) {
+  if (anim) { setTimeout(() => removeBottle(b), 200); return; }
+  const i = G.bottles.indexOf(b);
+  if (i < 0 || !isDone(b)) return;
+  const p = dp[i] || pos[i];
+  leaving.push({ b: b.slice(), x: p.x, y: p.y, t0: now() });
+  for (let k = 0; k < 18; k++) sparks.push({ x: p.x + (Math.random() - .5) * S, y: p.y + Math.random() * SH.Ht, vx: (Math.random() - .5) * 2.4, vy: -1.2 - Math.random() * 2.6, c: COLORS[b[0]], t0: now(), r: 1.5 + Math.random() * 2.5 });
+  [G.bottles, corks, waves, lifts, shakes, dp].forEach(a => a.splice(i, 1));
+  if (selected === i) selected = -1; else if (selected > i) selected--;
+  relayout(false); save(); ui(); kick();
+}
+function tapBottle(i) {
+  if (anim) return;
+  const b = G.bottles[i];
+  if (selected < 0) {
+    if (!b.length || isDone(b)) { shakes[i] = now(); kick(); return; }
+    selected = i; kick(); return;
+  }
+  if (selected === i) { selected = -1; kick(); return; }
+  const n = canPour(G.bottles, selected, i);
+  if (n) { pour(selected, i, n); return; }
+  if (b.length && !isDone(b)) { selected = i; kick(); return; }
+  shakes[i] = now(); kick();
+}
+cv.addEventListener('pointerdown', e => {
+  if (!G || !SH) return;
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  let best = -1, bd = Infinity;
+  pos.forEach((p, i) => {
+    if (x > p.x - S * .75 && x < p.x + S * .75 && y > p.y - S * .9 && y < p.y + SH.Ht + S * .4) {
+      const d = Math.abs(x - p.x); if (d < bd) { bd = d; best = i; }
+    }
+  });
+  if (best >= 0) tapBottle(best); else if (selected >= 0) { selected = -1; kick(); }
+});
+
+// ============ UI ============
+const $ = id => document.getElementById(id);
+function anyMove() {
+  for (let i = 0; i < G.bottles.length; i++) for (let j = 0; j < G.bottles.length; j++) if (canPour(G.bottles, i, j)) return true;
+  return false;
+}
+let banner = null;
+function ui() {
+  $('lvl').textContent = G.level;
+  const C = colorsFor(G.level), left = new Set(G.bottles.filter(b => !isDone(b)).flat()).size;
+  $('mColors').textContent = (C - left) + ' / ' + C;
+  $('mMoves').textContent = G.moves;
+  $('bUndo').disabled = !G.history.length || !!anim;
+  $('bAdd').disabled = G.extra <= 0 || !!anim;
+  $('nAdd').textContent = G.extra;
+  banner?.remove(); banner = null;
+  if (!anim && !solved(G.bottles) && !anyMove()) {
+    banner = document.createElement('div'); banner.className = 'banner';
+    banner.innerHTML = `<span>Ходов больше нет.</span>${G.history.length ? '<button data-a="undo">Назад</button>' : ''}${G.extra > 0 ? '<button data-a="add">+ Колба</button>' : ''}<button class="primary" data-a="restart">Заново</button>`;
+    banner.onclick = e => { const a = e.target.closest('button')?.dataset.a; if (a === 'undo') undo(); if (a === 'add') addBottle(); if (a === 'restart') restart(); };
+    main.appendChild(banner);
+  }
+}
+function undo() {
+  if (anim || !G.history.length) return;
+  G.bottles = G.history.pop(); G.moves = Math.max(0, G.moves - 1);
+  selected = -1; lifts = []; waves = []; shakes = [];
+  corks = G.bottles.map(() => 0);
+  if (G.bottles.length !== pos.length) relayout(false);
+  scheduleRemovals();
+  save(); ui(); kick();
+}
+function restart() {
+  if (anim) return;
+  G.bottles = G.initial.map(b => b.slice()); G.history = []; G.moves = 0; G.extra = 1;
+  selected = -1; corks = []; waves = []; lifts = []; shakes = []; leaving = []; sparks = [];
+  save(); relayout(false); ui(); kick();
+}
+function addBottle() {
+  if (anim || G.extra <= 0) return;
+  G.history.push(G.bottles.map(b => b.slice()));
+  G.bottles.push([]); G.extra--;
+  save(); relayout(); ui(); kick();
+}
+let overlay = null;
+function win() {
+  overlay?.remove();
+  overlay = document.createElement('div'); overlay.className = 'overlay';
+  overlay.innerHTML = `<div class="card" role="dialog" aria-label="Уровень пройден"><div class="kicker">Все цвета разлиты</div>
+    <h2>Уровень ${G.level} пройден</h2><p>Ходов: ${G.moves}</p>
+    <div class="row"><button class="primary" id="oNext">Следующий уровень</button></div></div>`;
+  document.body.appendChild(overlay);
+  const next = () => { overlay.remove(); overlay = null; startLevel(G.level + 1); };
+  overlay.querySelector('#oNext').onclick = next;
+  overlay.querySelector('#oNext').focus();
+}
+$('bUndo').onclick = undo;
+$('bRestart').onclick = restart;
+$('bAdd').onclick = addBottle;
+document.addEventListener('keydown', e => {
+  if (overlay) return;
+  const k = e.key.toLowerCase();
+  if (k === 'z' || k === 'я' || k === 'backspace') { e.preventDefault(); undo(); }
+  if (k === 'r' || k === 'к') restart();
+  if (k === 'escape') { selected = -1; kick(); }
+  const d = parseInt(e.key, 10); if (d >= 1 && d <= 9 && d <= G.bottles.length) tapBottle(d - 1);
+  if (e.key === '0' && G.bottles.length >= 10) tapBottle(9);
+});
+new ResizeObserver(() => relayout()).observe(main);
+
+if (load()) {
+  if (solved(G.bottles)) startLevel(G.level + 1);
+  else { relayout(); ui(); scheduleRemovals(); }
+} else startLevel(1);
+document.fonts?.ready.then(() => kick());
+})();
+</script>
+</body>
+</html>
